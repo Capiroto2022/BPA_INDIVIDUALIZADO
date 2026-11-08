@@ -1,0 +1,53 @@
+BPA INDIVIDUALIZADO | CORREÇÃO 29.1
+
+PROTEÇÃO NA EXPORTAÇÃO DO CADASTRO MESTRE
+
+Problema verificado no código da versão 29:
+A geração do XLSX aceitava Cadastro Mestre sem nenhuma linha de paciente.
+Assim, era possível baixar um arquivo que continha apenas o cabeçalho e
+receber uma mensagem de exportação concluída. Isso também podia habilitar
+a etapa de XLSX da exclusão total.
+
+Correção implementada:
+1. Antes de exportar, confere a cópia do Cadastro Mestre em memória com a
+   cópia persistida no IndexedDB do mesmo navegador.
+2. Se a base estiver vazia, a exportação XLSX é BLOQUEADA, com aviso claro.
+3. Se houver divergência entre memória e armazenamento persistido, NÃO gera
+   o arquivo: exige conferir a base local, sem excluir dados.
+4. Depois de gerar o XLSX, reabre e confere TODAS as linhas e células,
+   incluindo quantidade de registros, tipos das datas e valores textuais.
+5. A mensagem de sucesso informa quantas linhas de pacientes foram incluídas.
+6. A mesma proteção vale para a exportação XLSX antes da exclusão total.
+7. Os backups JSON (criptografados e sem criptografia) também comparam a
+   cópia persistida do Cadastro Mestre antes de gerar o arquivo, e informam
+   quantas linhas do Cadastro Mestre estão incluídas.
+8. Se não houver Cadastro Mestre, o backup completo da produção continua
+   permitido, com total do Cadastro Mestre igual a zero.
+
+Não foi modificada a estrutura de armazenamento, o cadastro de pacientes,
+a retroalimentação, a impressão, as importações nem os campos de data.
+O cache offline passou à identificação v29.1.
+
+IMPORTANTE
+
+- Se o Bloco A já mostrar 0 pacientes onde deveria mostrar muitos,
+  esta atualização NÃO reconstrói os dados perdidos: verifique a planilha
+  original ou um backup anterior, sem excluir a base local existente.
+- Se aparecer mensagem de divergência entre memória e IndexedDB,
+  não exclua dados locais. Preserve os backups anteriores.
+- Antes de atualizar, faça backup completo da versão instalada e guarde-o
+  separadamente. Não limpe o cache nem o armazenamento do navegador.
+- O XLSX não é criptografado e contém dados pessoais: proteja-o.
+- A geração de arquivos pode ter sido solicitada pelo navegador, mas o
+  aplicativo não consegue garantir que foram guardados no destino final.
+
+TESTES
+- Sintaxe do JavaScript e do service worker.
+- Cenário de base vazia: bloqueio de exportação.
+- Cenário de memória divergente da base persistida: bloqueio de exportação
+  e verificação do backup.
+- Cenário de dois registros fictícios: XLSX com três linhas (cabeçalho
+  e dois registros), datas formatadas e CNS, CEP e prontuário textuais.
+- Integridade dos arquivos ZIP/XLSX gerados, com inspeção independente.
+- Teste interativo no Chromium via servidor local foi bloqueado pelo
+  ambiente; não foi testado diretamente no Safari do iPhone.
